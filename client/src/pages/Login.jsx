@@ -7,7 +7,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, demoLogin, isFirebaseConfigured } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -35,6 +35,11 @@ export default function Login() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleQuickDemo = (role) => {
+    demoLogin(role);
+    navigate(role === 'eventManager' ? '/manager' : '/dashboard');
   };
 
   return (
@@ -96,6 +101,29 @@ export default function Login() {
             {isSubmitting ? 'Signing in...' : 'Log In'}
           </button>
         </form>
+
+        {/* Quick Demo Access Buttons (helpful for instant testing) */}
+        <div className="mt-6 pt-5 border-t border-gray-100">
+          <p className="text-xs text-gray-500 text-center mb-2 font-medium">
+            Quick testing shortcuts:
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => handleQuickDemo('student')}
+              className="py-1.5 px-3 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-center font-medium"
+            >
+              Demo: Student
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickDemo('eventManager')}
+              className="py-1.5 px-3 border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-center font-medium"
+            >
+              Demo: Manager
+            </button>
+          </div>
+        </div>
 
         {/* Link to signup */}
         <p className="text-center text-sm text-gray-500 mt-6">

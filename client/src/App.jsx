@@ -10,6 +10,45 @@ import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import CreateEditEvent from './pages/CreateEditEvent.jsx';
 import Profile from './pages/Profile.jsx';
 
+// Simple Error Boundary component to prevent blank screen crashes
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Campus Connect UI Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-gray-800">
+          <div className="bg-white border border-gray-200 rounded-lg p-8 max-w-md w-full shadow-xs text-center">
+            <h2 className="text-xl font-bold text-red-600 mb-2">Something went wrong</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {this.state.error?.message || 'An unexpected rendering error occurred.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Root navigation redirect based on trusted backend profile role
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -35,73 +74,75 @@ function RootRedirect() {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Default Root Redirect */}
-          <Route path="/" element={<RootRedirect />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Default Root Redirect */}
+            <Route path="/" element={<RootRedirect />} />
 
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+            {/* Public Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-          {/* Student Dashboard: /dashboard (Students only; Managers redirected to /manager) */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['student']}>
-                <StudentDashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Student Dashboard: /dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Event Manager Dashboard: /manager (Managers only; Students redirected to /dashboard) */}
-          <Route
-            path="/manager"
-            element={
-              <ProtectedRoute allowedRoles={['eventManager']}>
-                <ManagerDashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Event Manager Dashboard: /manager */}
+            <Route
+              path="/manager"
+              element={
+                <ProtectedRoute allowedRoles={['eventManager']}>
+                  <ManagerDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Create & Edit Event Routes (Event Managers only) */}
-          <Route
-            path="/events/create"
-            element={
-              <ProtectedRoute allowedRoles={['eventManager']}>
-                <CreateEditEvent />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/events/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={['eventManager']}>
-                <CreateEditEvent />
-              </ProtectedRoute>
-            }
-          />
+            {/* Create & Edit Event Routes */}
+            <Route
+              path="/events/create"
+              element={
+                <ProtectedRoute allowedRoles={['eventManager']}>
+                  <CreateEditEvent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/events/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={['eventManager']}>
+                  <CreateEditEvent />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Profile Route (Accessible by any authenticated user) */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+            {/* Profile Route */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Backward compatibility redirects */}
-          <Route path="/student-dashboard" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/manager-dashboard" element={<Navigate to="/manager" replace />} />
+            {/* Backward compatibility redirects */}
+            <Route path="/student-dashboard" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/manager-dashboard" element={<Navigate to="/manager" replace />} />
 
-          {/* Catch-all fallback */}
-          <Route path="*" element={<RootRedirect />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Catch-all fallback */}
+            <Route path="*" element={<RootRedirect />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

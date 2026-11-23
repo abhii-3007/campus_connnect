@@ -11,12 +11,10 @@ export default function NotificationPanel() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
-  // Real-time listener for current user's notifications
   useEffect(() => {
-    // Only subscribe if user has a valid Firebase UID
     const firebaseUid = user?.firebaseUid || user?.id;
 
-    if (!firebaseUid) {
+    if (!firebaseUid || !rtdb) {
       setNotifications([]);
       setLoading(false);
       return;
@@ -30,7 +28,6 @@ export default function NotificationPanel() {
         (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
-            // Convert Firebase object to array sorted newest first
             const list = Object.entries(data).map(([id, notif]) => ({
               id,
               ...notif,
@@ -43,14 +40,15 @@ export default function NotificationPanel() {
           setLoading(false);
         },
         (error) => {
-          console.warn('Realtime notifications listener warning:', error.message);
+          console.warn('Realtime notifications listener notice:', error.message);
           setLoading(false);
         }
       );
 
       return () => {
-        // Cleanup real-time listener on unmount or user change
-        off(userNotifsRef);
+        try {
+          off(userNotifsRef);
+        } catch (_) {}
         if (typeof unsubscribe === 'function') {
           unsubscribe();
         }
@@ -61,7 +59,6 @@ export default function NotificationPanel() {
     }
   }, [user]);
 
-  // Mark notification as read via authenticated backend API
   const handleMarkAsRead = async (notifId) => {
     try {
       setUpdatingId(notifId);
@@ -79,12 +76,15 @@ export default function NotificationPanel() {
         throw new Error('Failed to mark notification as read');
       }
 
-      // Optimistic local update while Firebase syncs
       setNotifications((prev) =>
         prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
       );
     } catch (error) {
       console.error('Error marking notification as read:', error.message);
+      // Local optimistic update
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
+      );
     } finally {
       setUpdatingId(null);
     }
@@ -94,7 +94,6 @@ export default function NotificationPanel() {
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-xs">
-      {/* Header with Live Unread Counter */}
       <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
         <h3 className="font-semibold text-gray-800 text-sm">
           Campus Notifications
