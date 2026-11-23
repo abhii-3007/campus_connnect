@@ -10,16 +10,16 @@ import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import CreateEditEvent from './pages/CreateEditEvent.jsx';
 import Profile from './pages/Profile.jsx';
 
-// Component to handle default root navigation based on current auth state
+// Root navigation redirect based on trusted backend profile role
 function RootRedirect() {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-gray-700">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-          <p className="text-sm text-gray-500">Loading Campus Connect...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+          <p className="text-sm font-medium text-gray-600">Loading Campus Connect...</p>
         </div>
       </div>
     );
@@ -30,11 +30,7 @@ function RootRedirect() {
   }
 
   const isManager = user.role === 'eventManager' || user.role === 'event_manager';
-  return isManager ? (
-    <Navigate to="/manager-dashboard" replace />
-  ) : (
-    <Navigate to="/student-dashboard" replace />
-  );
+  return isManager ? <Navigate to="/manager" replace /> : <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -42,38 +38,38 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Default Route */}
+          {/* Default Root Redirect */}
           <Route path="/" element={<RootRedirect />} />
 
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          {/* Student Dashboard */}
+          {/* Student Dashboard: /dashboard (Students only; Managers redirected to /manager) */}
           <Route
-            path="/student-dashboard"
+            path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={['student', 'eventManager', 'event_manager']}>
+              <ProtectedRoute allowedRoles={['student']}>
                 <StudentDashboard />
               </ProtectedRoute>
             }
           />
 
-          {/* Event Manager Dashboard */}
+          {/* Event Manager Dashboard: /manager (Managers only; Students redirected to /dashboard) */}
           <Route
-            path="/manager-dashboard"
+            path="/manager"
             element={
-              <ProtectedRoute allowedRoles={['eventManager', 'event_manager']}>
+              <ProtectedRoute allowedRoles={['eventManager']}>
                 <ManagerDashboard />
               </ProtectedRoute>
             }
           />
 
-          {/* Create & Edit Event Routes (Restricted to Event Manager) */}
+          {/* Create & Edit Event Routes (Event Managers only) */}
           <Route
             path="/events/create"
             element={
-              <ProtectedRoute allowedRoles={['eventManager', 'event_manager']}>
+              <ProtectedRoute allowedRoles={['eventManager']}>
                 <CreateEditEvent />
               </ProtectedRoute>
             }
@@ -81,13 +77,13 @@ function App() {
           <Route
             path="/events/edit/:id"
             element={
-              <ProtectedRoute allowedRoles={['eventManager', 'event_manager']}>
+              <ProtectedRoute allowedRoles={['eventManager']}>
                 <CreateEditEvent />
               </ProtectedRoute>
             }
           />
 
-          {/* Profile Route (Accessible by all authenticated users) */}
+          {/* Profile Route (Accessible by any authenticated user) */}
           <Route
             path="/profile"
             element={
@@ -96,6 +92,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Backward compatibility redirects */}
+          <Route path="/student-dashboard" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/manager-dashboard" element={<Navigate to="/manager" replace />} />
 
           {/* Catch-all fallback */}
           <Route path="*" element={<RootRedirect />} />

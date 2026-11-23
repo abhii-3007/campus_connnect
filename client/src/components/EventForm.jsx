@@ -1,16 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function EventForm({ initialData, onSubmit, onCancel, submitLabel = 'Save Event' }) {
+export default function EventForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  submitLabel = 'Save Event',
+  isLoading = false,
+}) {
+  const formatDateForInput = (rawDate) => {
+    if (!rawDate) return '';
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    date: initialData?.date || '',
+    date: formatDateForInput(initialData?.date),
     time: initialData?.time || '',
     venue: initialData?.venue || '',
-    maxParticipants: initialData?.maxParticipants || '',
+    capacity: initialData?.capacity || initialData?.maxParticipants || '',
   });
 
   const [error, setError] = useState('');
+
+  // Update form fields if initialData changes after async load
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        date: formatDateForInput(initialData.date),
+        time: initialData.time || '',
+        venue: initialData.venue || '',
+        capacity: initialData.capacity || initialData.maxParticipants || '',
+      });
+    }
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,28 +47,33 @@ export default function EventForm({ initialData, onSubmit, onCancel, submitLabel
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Basic frontend validation
+    // Frontend validation
     if (
       !formData.title.trim() ||
       !formData.description.trim() ||
       !formData.date ||
-      !formData.time ||
+      !formData.time.trim() ||
       !formData.venue.trim() ||
-      !formData.maxParticipants
+      formData.capacity === ''
     ) {
       setError('Please fill in all event fields.');
       return;
     }
 
-    if (Number(formData.maxParticipants) <= 0) {
-      setError('Maximum participants must be a positive number.');
+    const numCapacity = Number(formData.capacity);
+    if (isNaN(numCapacity) || numCapacity <= 0 || !Number.isInteger(numCapacity)) {
+      setError('Maximum capacity must be a positive whole number.');
       return;
     }
 
     setError('');
     onSubmit({
-      ...formData,
-      maxParticipants: Number(formData.maxParticipants),
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      date: formData.date,
+      time: formData.time.trim(),
+      venue: formData.venue.trim(),
+      capacity: numCapacity,
     });
   };
 
@@ -64,7 +96,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, submitLabel
           value={formData.title}
           onChange={handleChange}
           placeholder="e.g. Annual Campus Hackathon"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
           required
         />
       </div>
@@ -79,8 +111,8 @@ export default function EventForm({ initialData, onSubmit, onCancel, submitLabel
           rows={4}
           value={formData.description}
           onChange={handleChange}
-          placeholder="Describe the event, schedule, and guidelines..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          placeholder="Describe the event agenda, speaker details, and requirements..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
           required
         />
       </div>
@@ -96,7 +128,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, submitLabel
             name="date"
             value={formData.date}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
             required
           />
         </div>
@@ -111,13 +143,13 @@ export default function EventForm({ initialData, onSubmit, onCancel, submitLabel
             value={formData.time}
             onChange={handleChange}
             placeholder="e.g. 10:00 AM or 02:30 PM"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
             required
           />
         </div>
       </div>
 
-      {/* Venue and Max Participants row */}
+      {/* Venue and Capacity row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -129,44 +161,46 @@ export default function EventForm({ initialData, onSubmit, onCancel, submitLabel
             value={formData.venue}
             onChange={handleChange}
             placeholder="e.g. Main Auditorium / Lab 301"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
             required
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Maximum Participants *
+            Maximum Participants (Capacity) *
           </label>
           <input
             type="number"
-            name="maxParticipants"
+            name="capacity"
             min="1"
-            value={formData.maxParticipants}
+            value={formData.capacity}
             onChange={handleChange}
             placeholder="e.g. 100"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
             required
           />
         </div>
       </div>
 
-      {/* Form Buttons */}
+      {/* Form Action Buttons */}
       <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-100">
         {onCancel && (
           <button
             type="button"
+            disabled={isLoading}
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
         )}
         <button
           type="submit"
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"
+          disabled={isLoading}
+          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
         >
-          {submitLabel}
+          {isLoading ? 'Saving...' : submitLabel}
         </button>
       </div>
     </form>

@@ -25,7 +25,7 @@ export default function Navbar() {
           {/* Logo / Brand Title */}
           <div className="flex items-center space-x-3">
             <Link
-              to={isManager ? '/manager-dashboard' : '/student-dashboard'}
+              to={isManager ? '/manager' : '/dashboard'}
               className="text-xl font-bold text-blue-600 hover:text-blue-700"
             >
               Campus Connect
@@ -46,14 +46,15 @@ export default function Navbar() {
           {/* Navigation Items */}
           {user ? (
             <div className="flex items-center space-x-4">
-              {/* Navigation Links */}
+              {/* Dashboard Link */}
               <Link
-                to={isManager ? '/manager-dashboard' : '/student-dashboard'}
+                to={isManager ? '/manager' : '/dashboard'}
                 className="text-sm text-gray-700 hover:text-blue-600 font-medium"
               >
-                Events
+                {isManager ? 'Manager Dashboard' : 'Events'}
               </Link>
 
+              {/* Event Manager specific action */}
               {isManager && (
                 <Link
                   to="/events/create"
@@ -63,6 +64,7 @@ export default function Navbar() {
                 </Link>
               )}
 
+              {/* Profile Link */}
               <Link
                 to="/profile"
                 className="text-sm text-gray-700 hover:text-blue-600 font-medium"
@@ -82,7 +84,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-sm text-red-600 hover:text-red-700 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md font-medium"
+                className="text-sm text-red-600 hover:text-red-700 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md font-medium cursor-pointer"
               >
                 Logout
               </button>

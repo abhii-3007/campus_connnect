@@ -4,11 +4,24 @@ export default function EventCard({
   event,
   isManager = false,
   isRegistered = false,
+  isRegistering = false,
   onRegister,
   onEdit,
   onDelete,
 }) {
-  const isFull = event.registeredCount >= event.maxParticipants;
+  const eventId = event._id || event.id;
+  const capacity = event.capacity || event.maxParticipants || 0;
+  const registeredCount = event.registeredCount || 0;
+  const isFull = registeredCount >= capacity;
+
+  // Format date nicely if it's an ISO string
+  const formattedDate = event.date
+    ? new Date(event.date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '';
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-xs hover:shadow-sm transition-shadow flex flex-col justify-between">
@@ -25,7 +38,7 @@ export default function EventCard({
                 : 'bg-green-100 text-green-700'
             }`}
           >
-            {event.registeredCount}/{event.maxParticipants} spots
+            {registeredCount}/{capacity} spots
           </span>
         </div>
 
@@ -33,7 +46,7 @@ export default function EventCard({
         <div className="text-sm text-gray-600 space-y-1 mb-3">
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-700">Date:</span>
-            <span>{event.date}</span>
+            <span>{formattedDate || event.date}</span>
             <span className="text-gray-400">•</span>
             <span className="font-medium text-gray-700">Time:</span>
             <span>{event.time}</span>
@@ -41,6 +54,11 @@ export default function EventCard({
           <div>
             <span className="font-medium text-gray-700">Venue:</span> {event.venue}
           </div>
+          {event.createdBy?.name && (
+            <div className="text-xs text-gray-400">
+              <span>Organized by: {event.createdBy.name}</span>
+            </div>
+          )}
         </div>
 
         {/* Description */}
@@ -55,14 +73,14 @@ export default function EventCard({
           <div className="flex items-center justify-end space-x-2">
             <button
               type="button"
-              onClick={() => onEdit && onEdit(event.id)}
+              onClick={() => onEdit && onEdit(eventId)}
               className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md"
             >
               Edit
             </button>
             <button
               type="button"
-              onClick={() => onDelete && onDelete(event.id)}
+              onClick={() => onDelete && onDelete(eventId)}
               className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md"
             >
               Delete
@@ -75,17 +93,25 @@ export default function EventCard({
             </span>
             <button
               type="button"
-              onClick={() => onRegister && onRegister(event.id)}
-              disabled={isRegistered || isFull}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md ${
+              onClick={() => onRegister && onRegister(eventId)}
+              disabled={isRegistered || isFull || isRegistering}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 isRegistered
                   ? 'bg-gray-100 text-gray-500 cursor-default'
                   : isFull
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : isRegistering
+                  ? 'bg-blue-400 text-white cursor-wait'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              {isRegistered ? 'Registered ✓' : isFull ? 'Event Full' : 'Register'}
+              {isRegistering
+                ? 'Registering...'
+                : isRegistered
+                ? 'Registered ✓'
+                : isFull
+                ? 'Event Full'
+                : 'Register'}
             </button>
           </div>
         )}

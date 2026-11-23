@@ -7,10 +7,9 @@ import {
   updateProfile as updateFirebaseProfile,
 } from 'firebase/auth';
 import { auth } from '../firebase/firebase.js';
+import authService from '../services/authService.js';
 
 const AuthContext = createContext(null);
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
  * Translates Firebase Auth error codes into clear, beginner-friendly messages.
@@ -37,42 +36,22 @@ export function formatAuthError(errorCode) {
 }
 
 export function AuthProvider({ children }) {
-  // Current user state (combines Firebase auth identity with MongoDB profile and role)
   const [user, setUser] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /**
-   * Synchronize the authenticated Firebase user with the MongoDB database.
-   * Receives MongoDB profile (with role: 'student' | 'eventManager').
-   */
+  // Synchronize authenticated Firebase user with MongoDB database
   const syncWithBackend = async (fbUser, extraData = {}) => {
     try {
-      const token = await fbUser.getIdToken();
-
-      const response = await fetch(`${API_URL}/api/auth/sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: extraData.name || fbUser.displayName || '',
-          department: extraData.department || '',
-          year: extraData.year || '',
-        }),
+      const response = await authService.syncUser({
+        name: extraData.name || fbUser.displayName || '',
+        department: extraData.department || '',
+        year: extraData.year || '',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to sync user with server');
-      }
-
-      const data = await response.json();
-      return data.user;
+      return response.user;
     } catch (error) {
       console.warn('Backend sync warning:', error.message);
-      // Fallback local representation if backend server is offline or in transition
+      // Temporary local fallback if backend is momentarily unreachable
       return {
         id: fbUser.uid,
         firebaseUid: fbUser.uid,
@@ -85,7 +64,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Listen to Firebase authentication state changes
+  // Track Firebase auth session changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentFbUser) => {
       setFirebaseUser(currentFbUser);
@@ -95,7 +74,7 @@ export function AuthProvider({ children }) {
           const profile = await syncWithBackend(currentFbUser);
           setUser(profile);
         } catch (err) {
-          console.error('Error restoring session:', err);
+          console.error('Session restoration error:', err);
           setUser(null);
         }
       } else {
@@ -109,21 +88,19 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * Signup with name, email and password.
+   * User Signup
    */
   const signup = async (name, email, password) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-    // Update display name in Firebase Auth
     if (name) {
       try {
         await updateFirebaseProfile(userCredential.user, { displayName: name });
       } catch (e) {
-        console.warn('Could not update Firebase displayName:', e);
+        console.warn('Could not set displayName on Firebase user:', e);
       }
     }
 
-    // Synchronize newly created user with MongoDB
     const syncedUser = await syncWithBackend(userCredential.user, { name });
     setUser(syncedUser);
     setFirebaseUser(userCredential.user);
@@ -131,12 +108,10 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Login with email and password.
+   * User Login
    */
   const login = async (email, password) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-    // Synchronize logged-in user with MongoDB to fetch verified role
     const syncedUser = await syncWithBackend(userCredential.user);
     setUser(syncedUser);
     setFirebaseUser(userCredential.user);
@@ -144,7 +119,7 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Logout the current user session.
+   * User Logout
    */
   const logout = async () => {
     await signOut(auth);
@@ -153,7 +128,7 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Helper to retrieve a fresh Firebase ID token for API calls.
+   * Retrieve fresh Firebase ID Token
    */
   const getIdToken = async () => {
     if (auth.currentUser) {
@@ -163,7 +138,7 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Update profile information locally and in state.
+   * Update profile state locally
    */
   const updateProfile = (updatedFields) => {
     setUser((prev) => (prev ? { ...prev, ...updatedFields } : null));

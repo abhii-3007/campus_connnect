@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Event from '../models/Event.js';
 import Registration from '../models/Registration.js';
+import { notifyStudentsNewEvent } from '../services/notificationService.js';
 
 /**
  * GET /api/events
@@ -93,6 +94,7 @@ export const getEventById = async (req, res) => {
  * POST /api/events
  * Only eventManager.
  * Validate required fields and associate createdBy with req.user._id.
+ * Dispatches real-time student notifications via Firebase Realtime Database.
  */
 export const createEvent = async (req, res) => {
   try {
@@ -122,6 +124,7 @@ export const createEvent = async (req, res) => {
       });
     }
 
+    // 1. Save event in MongoDB
     const event = await Event.create({
       title: title.trim(),
       description: description.trim(),
@@ -133,6 +136,11 @@ export const createEvent = async (req, res) => {
     });
 
     const populatedEvent = await event.populate('createdBy', 'name email department');
+
+    // 2. Trigger non-blocking real-time notification to students
+    notifyStudentsNewEvent(event).catch((err) => {
+      console.error('Non-blocking notification error:', err.message);
+    });
 
     return res.status(201).json({
       success: true,

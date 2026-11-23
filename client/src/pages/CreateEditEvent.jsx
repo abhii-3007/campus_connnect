@@ -1,28 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar.jsx';
 import EventForm from '../components/EventForm.jsx';
-import { INITIAL_EVENTS } from '../data/sampleData.js';
+import eventService from '../services/eventService.js';
 
 export default function CreateEditEvent() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
 
-  // Look up existing event if editing
-  const existingEvent = isEditing
-    ? INITIAL_EVENTS.find((evt) => evt.id === id)
-    : null;
+  const [initialData, setInitialData] = useState(null);
+  const [loading, setLoading] = useState(isEditing);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (formData) => {
-    // In future phases, this will trigger POST/PUT /api/events
-    console.log(isEditing ? 'Updating event:' : 'Creating event:', formData);
-    alert(isEditing ? 'Event updated successfully!' : 'Event created successfully!');
-    navigate('/manager-dashboard');
+  // If editing, fetch existing event data from GET /api/events/:id
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const fetchExistingEvent = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await eventService.getEventById(id);
+        if (response?.event) {
+          setInitialData(response.event);
+        } else {
+          setError('Event details could not be found.');
+        }
+      } catch (err) {
+        console.error('Failed to load event for editing:', err.message);
+        setError(err.message || 'Failed to load event data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExistingEvent();
+  }, [id, isEditing]);
+
+  const handleSubmit = async (formData) => {
+    setSubmitting(true);
+    setError('');
+
+    try {
+      if (isEditing) {
+        await eventService.updateEvent(id, formData);
+      } else {
+        await eventService.createEvent(formData);
+      }
+
+      navigate('/manager');
+    } catch (err) {
+      console.error('Failed to save event:', err.message);
+      setError(err.message || 'Failed to save event. Please check inputs and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
-    navigate('/manager-dashboard');
+    navigate('/manager');
   };
 
   return (
@@ -36,17 +74,31 @@ export default function CreateEditEvent() {
           </h1>
           <p className="text-sm text-gray-600 mt-1">
             {isEditing
-              ? 'Update details for this campus event.'
-              : 'Fill in the information below to schedule and publish a campus event.'}
+              ? 'Update event details and capacity in the form below.'
+              : 'Publish a new campus event and notify all registered students in real-time.'}
           </p>
         </div>
 
-        <EventForm
-          initialData={existingEvent}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          submitLabel={isEditing ? 'Update Event' : 'Publish Event'}
-        />
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md">
+            ✕ {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-12 text-center text-sm text-gray-500 shadow-xs">
+            <div className="inline-block animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mb-2"></div>
+            <p>Loading event information...</p>
+          </div>
+        ) : (
+          <EventForm
+            initialData={initialData}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            submitLabel={isEditing ? 'Update Event' : 'Publish Event'}
+            isLoading={submitting}
+          />
+        )}
       </main>
     </div>
   );

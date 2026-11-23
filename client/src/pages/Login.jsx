@@ -25,10 +25,9 @@ export default function Login() {
       const loggedUser = await login(email, password);
       const isManager =
         loggedUser.role === 'eventManager' || loggedUser.role === 'event_manager';
-      navigate(isManager ? '/manager-dashboard' : '/student-dashboard');
+      navigate(isManager ? '/manager' : '/dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      // Map Firebase auth errors into beginner-friendly messages
       const userMessage = err.code
         ? formatAuthError(err.code)
         : err.message || 'Login failed. Please check your credentials.';
@@ -45,7 +44,7 @@ export default function Login() {
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-blue-600">Campus Connect</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Sign in with your Firebase credentials
+            Sign in with your email and password
           </p>
         </div>
 

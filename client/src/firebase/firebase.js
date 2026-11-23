@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getDatabase } from 'firebase/database';
 
 // Firebase client configuration using Vite environment variables
 const firebaseConfig = {
@@ -15,6 +16,7 @@ const firebaseConfig = {
 // Initialize Firebase only once
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Export Firebase Authentication instance
+// Export Firebase Authentication and Realtime Database instances
 export const auth = getAuth(app);
+export const rtdb = getDatabase(app);
 export default app;

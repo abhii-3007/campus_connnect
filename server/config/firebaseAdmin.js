@@ -1,5 +1,6 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getDatabase } from 'firebase-admin/database';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
@@ -7,19 +8,25 @@ dotenv.config();
 
 /**
  * Initialize Firebase Admin SDK safely using environment variables.
- * Supports:
- * 1. Service account JSON file: FIREBASE_SERVICE_ACCOUNT_PATH
- * 2. Individual credentials: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
+ * Configures both Auth and Realtime Database.
  */
 let firebaseApp = null;
 let firebaseAuth = null;
+let firebaseDb = null;
 
 if (!getApps().length) {
   try {
+    const databaseURL =
+      process.env.FIREBASE_DATABASE_URL ||
+      (process.env.FIREBASE_PROJECT_ID
+        ? `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
+        : undefined);
+
     if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH && fs.existsSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)) {
       const serviceAccount = JSON.parse(fs.readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, 'utf8'));
       firebaseApp = initializeApp({
         credential: cert(serviceAccount),
+        databaseURL,
       });
       console.log('Firebase Admin initialized using service account file.');
     } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
@@ -30,6 +37,7 @@ if (!getApps().length) {
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           privateKey: privateKey,
         }),
+        databaseURL,
       });
       console.log('Firebase Admin initialized using environment variables.');
     } else {
@@ -43,8 +51,17 @@ if (!getApps().length) {
 }
 
 if (getApps().length) {
-  firebaseAuth = getAuth();
+  try {
+    firebaseAuth = getAuth();
+  } catch (err) {
+    console.error('Error getting Firebase Auth instance:', err.message);
+  }
+  try {
+    firebaseDb = getDatabase();
+  } catch (err) {
+    console.warn('Error getting Firebase Database instance:', err.message);
+  }
 }
 
-export { firebaseApp, firebaseAuth, getAuth };
+export { firebaseApp, firebaseAuth, firebaseDb, getAuth, getDatabase };
 export default firebaseAuth;

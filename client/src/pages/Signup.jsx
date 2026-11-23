@@ -36,10 +36,9 @@ export default function Signup() {
     try {
       // Firebase create user + sync with MongoDB (defaults to student role)
       await signup(fullName, email, password);
-      navigate('/student-dashboard');
+      navigate('/dashboard');
     } catch (err) {
       console.error('Signup error:', err);
-      // Map Firebase auth errors into beginner-friendly messages
       const userMessage = err.code
         ? formatAuthError(err.code)
         : err.message || 'Registration failed. Please try again.';

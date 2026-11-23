@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "notifications": {
+      "$firebaseUid": {
+        // Only the authenticated student can read their own notification feed
+        ".read": "auth != null && auth.uid === $firebaseUid",
+
+        // Clients cannot write or modify notifications directly
+        // All writes and updates are performed by the trusted backend Admin SDK
+        ".write": false
+      }
+    }
+  }
+}
